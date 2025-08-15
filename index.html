@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>What with me?</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            --bg-color: var(--tg-theme-bg-color);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-style: normal;
+            font-weight: 400;
+            font-size: 2dvh;
+            line-height: 1.4;
+            word-spacing: 2px;
+            background-color: var(--bg-color);
+            color: var(--tg-theme-text-color);
+            padding: 20px;
+            color-scheme: var(--tg-color-scheme);
+        }
+
+        a {
+            color: var(--tg-theme-link-color);
+        }
+
+        .cards {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-rows: fit-content(100px);
+        }
+
+        .card {
+            --color: darkcyan;
+            background-color: lightblue;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .bars {
+            --normal: 50%;
+            width: 100%;
+            aspect-ratio: 3;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            position: relative;
+        }
+
+        .bars::before {
+            content: "";
+            position: absolute;
+            bottom: var(--normal);
+            width: 100%;
+            pointer-events: none;
+            height: 2px;
+            background: repeating-linear-gradient(to right,
+                    var(--color),
+                    var(--color) 10px,
+                    transparent 10px,
+                    transparent 20px);
+        }
+
+        .bar {
+            height: 50%;
+            background-color: var(--color);
+            border-radius: 3px 3px 0 0;
+            width: 8%;
+            bottom: 0;
+        }
+
+        .weekdays {
+            width: 100%;
+            height: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .weekdays span {
+            text-align: center;
+            color: gray;
+        }
+
+        h2 {
+            font-size: 3dvh;
+            font-weight: 500;
+        }
+
+        .plot {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .count {
+            font-size: 3dvh;
+        }
+
+        .data {
+            display: grid;
+            flex-direction: row;
+            padding-top: 10px;
+            grid-template-columns: 25% 75%;
+        }
+
+        .side {
+            display: flex;
+            flex-direction: column;
+            color: var(--color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cards">
+    </div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        Telegram.WebApp.ready();
+        Telegram.WebApp.onEvent('themeChanged', function () {
+            document.documentElement.className = Telegram.WebApp.colorScheme;
+            document.body.setAttribute('style', '--bg-color:' + Telegram.WebApp.backgroundColor);
+        });
+
+        let params = new URLSearchParams(Telegram.WebApp.initData);
+        let user = JSON.parse(decodeURIComponent(params.get('user')));
+
+        let hash = params.get('hash');
+        params.delete('hash');
+        const checkDataString = Array.from(params.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+
+        let url = new URL('https://functions.yandexcloud.net/d4ep1aa8id0ppllbt3i7');
+
+        url.searchParams.set('user_id', user['id']);
+        url.searchParams.set('hash', hash);
+        url.searchParams.set('checkDataString', checkDataString);
+
+        const titles = {
+            'energy': 'Энергия',
+            'fat': 'Жиры',
+            'protein': 'Белки',
+            'carbohydrate': 'Углеводы'
+        }
+
+        const dates = [];
+        const now = new Date();
+
+        const weekdays = document.createElement("div");
+        weekdays.classList.add('weekdays');
+
+        for (let i = 0; i < 7; i++) {
+            date = new Date(now - 86400000 * (6 - i))
+            dates.push(date.toISOString().substring(0, 10));
+
+            const span = document.createElement("span");
+            span.textContent = 'ВПВСЧПС'[date.getDay()];
+            weekdays.appendChild(span);
+        }
+
+        cards = document.querySelector('.cards');
+        const today = document.createElement("span");
+        today.textContent = 'Сегодня'
+
+        function draw(key, values, normal) {
+            const card = document.createElement("div");
+            card.classList.add('card');
+            card.id = key;
+
+            const head = document.createElement("h2");
+            head.textContent = titles[key];
+            card.appendChild(head);
+
+            values = dates.map(date => values[date] || 0);
+            const k = 100 / Math.max(...values, normal);
+
+            const side = document.createElement("div");
+            side.classList.add('side');
+
+            const value = document.createElement("span");
+            const count = document.createElement("span");
+            count.classList.add('count');
+            count.textContent = values[values.length - 1]
+            value.appendChild(count);
+            const unit = document.createElement("span");
+            unit.textContent = key === 'energy' ? ' ккал' : ' гр';
+            value.appendChild(unit);
+
+            side.appendChild(value);
+            side.appendChild(today.cloneNode(true));
+
+            const bars = document.createElement("div");
+            bars.classList.add('bars')
+            bars.style.setProperty("--normal", Math.round(k * normal) + "%");
+
+            values.forEach(value => {
+                const bar = document.createElement("div");
+                bar.classList.add('bar')
+                bar.style.height = Math.round(k * value) + '%';
+
+                bars.appendChild(bar);
+            });
+
+            const plot = document.createElement("div");
+            plot.classList.add('plot');
+            plot.appendChild(bars);
+            plot.appendChild(weekdays.cloneNode(true));
+
+            const data = document.createElement("div");
+            data.classList.add('data');
+            data.appendChild(side);
+            data.appendChild(plot);
+
+            card.appendChild(head);
+            card.appendChild(data);
+
+            cards.appendChild(card);
+        }
+
+        const drawn = ['energy', 'fat', 'protein', 'carbohydrate'];
+        let data = {};
+
+        (async function () {
+            const response = await fetch(url);
+            if (response.ok) {
+                data = await response.json()
+
+                results = data['results'];
+                user = data['user'];
+
+                drawn.forEach((key, i) => draw(key, results[key], user[key]));
+            }
+        })();
+
+
+    </script>
+
+</body>
+
+</html>
