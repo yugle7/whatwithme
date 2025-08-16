@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport"
@@ -200,7 +201,7 @@
             const value = document.createElement("span");
             const count = document.createElement("span");
             count.classList.add('count');
-            count.textContent = values[values.length - 1]
+            count.textContent = Math.round(values[values.length - 1]);
             value.appendChild(count);
             const unit = document.createElement("span");
             unit.textContent = key === 'energy' ? ' ккал' : ' гр';
